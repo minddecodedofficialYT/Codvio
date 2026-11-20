@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Subtle shadow under white symbol -->
+    <path
+        android:pathData="M34,39 L49,54.5 L34,70 M54,70 L74,70"
+        android:strokeColor="#331E0B4B"
+        android:strokeWidth="7.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Bold white terminal prompt >_ inside 66dp safe zone -->
+    <path
+        android:pathData="M34,37.5 L49,53 L34,68.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M54,68.5 L74,68.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6.8"
+        android:strokeLineCap="round" />
+</vector>

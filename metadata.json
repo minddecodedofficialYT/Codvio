@@ -1,0 +1,6 @@
+{
+  "name": "Codvio",
+  "description": "An on-device AI coding agent app for Android with workspace setup, session management, and project chat shell.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

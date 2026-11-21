@@ -56,8 +56,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.model.AgentSkill
 import com.example.model.CustomCommand
 import com.example.model.McpServerConfig
-import com.example.model.McpServerSuggestion
-import com.example.model.McpServerSuggestions
 import com.example.model.PermissionRule
 import com.example.model.PermissionRuleAction
 import com.example.model.PermissionRuleType
@@ -149,8 +147,7 @@ fun McpServersSettingsSection(
     mcpServers: List<McpServerConfig>,
     onOpenAddServer: () -> Unit,
     onTestServer: (String) -> Unit,
-    onDeleteServer: (String) -> Unit,
-    onAddSuggestedServer: (name: String, url: String) -> Unit = { _, _ -> }
+    onDeleteServer: (String) -> Unit
 ) {
     GlossyCardReveal(delayMillis = 120) {
         GlassCard(
@@ -208,108 +205,7 @@ fun McpServersSettingsSection(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                Text(
-                    text = "Suggestions",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = BlueLightAccent,
-                    modifier = Modifier.testTag("mcp_suggestions_header")
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    McpServerSuggestions.all.forEach { suggestion ->
-                        val normalizedSuggestionUrl = suggestion.url.trim().trimEnd('/').lowercase()
-                        val isAdded = mcpServers.any { existing ->
-                            existing.url.trim().trimEnd('/').lowercase() == normalizedSuggestionUrl
-                        }
-                        McpSuggestionRow(
-                            suggestion = suggestion,
-                            isAdded = isAdded,
-                            onAddClick = { onAddSuggestedServer(suggestion.name, suggestion.url) }
-                        )
-                    }
-                }
             }
-        }
-    }
-}
-
-@Composable
-private fun McpSuggestionRow(
-    suggestion: McpServerSuggestion,
-    isAdded: Boolean,
-    onAddClick: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = SurfaceElevated,
-        border = BorderStroke(
-            1.dp,
-            if (isAdded) LiveGreenBorder else BorderSubtle
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("mcp_suggestion_row_${suggestion.id}")
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = suggestion.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (suggestion.needsSignIn) {
-                        Surface(
-                            shape = CircleShape,
-                            color = WarningAmber.copy(alpha = 0.14f),
-                            border = BorderStroke(1.dp, WarningAmber.copy(alpha = 0.55f)),
-                            modifier = Modifier.testTag("mcp_suggestion_auth_${suggestion.id}")
-                        ) {
-                            Text(
-                                text = "Needs sign-in",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = WarningAmber,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-                Text(
-                    text = suggestion.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            GlassOutlinedButton(
-                text = if (isAdded) "Added" else "Add",
-                onClick = onAddClick,
-                enabled = !isAdded,
-                testTag = "mcp_suggestion_add_${suggestion.id}",
-                height = 38.dp,
-                contentColor = if (isAdded) LiveGreen else BlueLightAccent,
-                borderColor = if (isAdded) LiveGreenBorder else BorderActive
-            )
         }
     }
 }

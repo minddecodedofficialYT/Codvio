@@ -123,82 +123,6 @@ data class AgentSkill(
     val isFromProject: Boolean = false
 )
 
-enum class ChatWorkspacePanel(val label: String) {
-    CHAT("Chat"),
-    TERMINAL("Terminal"),
-    BROWSER("Browser"),
-    NOTES("Notes")
-}
-
-data class NoteItem(
-    val id: String,
-    val title: String,
-    val content: String,
-    val updatedAtMs: Long = System.currentTimeMillis()
-)
-
-data class TodoItem(
-    val id: String,
-    val text: String,
-    val isDone: Boolean = false,
-    val createdAtMs: Long = System.currentTimeMillis()
-)
-
-data class McpServerSuggestion(
-    val id: String,
-    val name: String,
-    val url: String,
-    val description: String,
-    val needsSignIn: Boolean = false
-)
-
-object McpServerSuggestions {
-    val all = listOf(
-        McpServerSuggestion(
-            id = "context7",
-            name = "Context7",
-            url = "https://mcp.context7.com/mcp",
-            description = "Up-to-date documentation for libraries and frameworks.",
-            needsSignIn = false
-        ),
-        McpServerSuggestion(
-            id = "deepwiki",
-            name = "DeepWiki",
-            url = "https://mcp.deepwiki.com/mcp",
-            description = "Ask questions about any public GitHub repo.",
-            needsSignIn = false
-        ),
-        McpServerSuggestion(
-            id = "huggingface",
-            name = "Hugging Face",
-            url = "https://huggingface.co/mcp",
-            description = "Search AI models and datasets.",
-            needsSignIn = false
-        ),
-        McpServerSuggestion(
-            id = "github",
-            name = "GitHub",
-            url = "https://api.githubcopilot.com/mcp/",
-            description = "GitHub tools for your repos.",
-            needsSignIn = true
-        ),
-        McpServerSuggestion(
-            id = "notion",
-            name = "Notion",
-            url = "https://mcp.notion.com/mcp",
-            description = "Search and read your Notion workspace.",
-            needsSignIn = true
-        ),
-        McpServerSuggestion(
-            id = "microsoft_learn",
-            name = "Microsoft Learn",
-            url = "https://learn.microsoft.com/api/mcp",
-            description = "Search official Microsoft documentation.",
-            needsSignIn = false
-        )
-    )
-}
-
 enum class ToolStatus {
     RUNNING,
     DONE,
@@ -437,8 +361,6 @@ data class AppUiState(
     val vioYFraction: Float = 0.72f,
     val vioMood: VioMood = VioMood.IDLE,
     val isVaultStatePending: Boolean = false,
-    val notes: List<NoteItem> = emptyList(),
-    val todos: List<TodoItem> = emptyList(),
     val draftMessage: String = "",
     val pendingAttachment: ChatAttachment? = null,
     val activeStreamingSessionId: String? = null,

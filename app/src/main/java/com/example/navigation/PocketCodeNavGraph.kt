@@ -205,13 +205,7 @@ fun PocketCodeNavGraph(
                         viewModel.undoToolExecution(sessionId, messageId, toolId, onFeedback)
                     },
                     onAttachImage = viewModel::attachImageFromUri,
-                    onClearAttachment = viewModel::clearPendingAttachment,
-                    onAddNote = viewModel::addNote,
-                    onUpdateNote = viewModel::updateNote,
-                    onDeleteNote = viewModel::deleteNote,
-                    onAddTodo = viewModel::addTodo,
-                    onToggleTodo = viewModel::toggleTodo,
-                    onDeleteTodo = viewModel::deleteTodo
+                    onClearAttachment = viewModel::clearPendingAttachment
                 )
             }
         }

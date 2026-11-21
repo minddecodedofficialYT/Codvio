@@ -34,8 +34,6 @@ class ProjectWorkspace private constructor(
     private val fileRoot: File?,
     private val safTreeUri: Uri?
 ) {
-    val directDirectory: File?
-        get() = fileRoot?.takeIf { it.exists() && it.isDirectory && it.canRead() }
 
     suspend fun detectProjectInfo(): Pair<ProjectType, Boolean> = withContext(Dispatchers.IO) {
         val topEntries = listTopLevelNames()

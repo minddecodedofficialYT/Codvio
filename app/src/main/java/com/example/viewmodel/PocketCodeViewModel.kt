@@ -13,8 +13,6 @@ import com.example.data.EncryptedProviderStorage
 import com.example.data.FetchModelsOutcome
 import com.example.data.McpClient
 import com.example.data.McpTestOutcome
-import com.example.data.NotesStorage
-import com.example.data.NotesTodosSnapshot
 import com.example.data.ProjectWorkspace
 import com.example.data.ProviderJsonCodec
 import com.example.data.ProviderNetworkClient
@@ -37,7 +35,6 @@ import com.example.model.CustomCommand
 import com.example.model.FallbackEntry
 import com.example.model.LimitFlagEntry
 import com.example.model.McpServerConfig
-import com.example.model.NoteItem
 import com.example.model.PermissionPromptState
 import com.example.model.PermissionRule
 import com.example.model.PermissionRuleAction
@@ -48,7 +45,6 @@ import com.example.model.ProviderKeyEntry
 import com.example.model.ProviderOperationState
 import com.example.model.ReasoningEffort
 import com.example.model.SessionItem
-import com.example.model.TodoItem
 import com.example.model.ToolExecutionItem
 import com.example.model.ToolStatus
 import com.example.model.VioMood
@@ -70,7 +66,6 @@ class PocketCodeViewModel(
     private val appContext: Context? = null,
     private val storage: EncryptedProviderStorage? = null,
     private val sessionStorage: SessionStorage? = null,
-    private val notesStorage: NotesStorage? = null,
     private val networkClient: ProviderNetworkClient = ProviderNetworkClient(),
     private val mcpClient: McpClient = McpClient(),
     private val orchestrator: AgentOrchestrator = AgentOrchestrator(AgentChatClient(), mcpClient),
@@ -101,12 +96,11 @@ class PocketCodeViewModel(
                 triggerTransientVioMood(VioMood.CHEER, vioCheerDurationMs)
             }
         }
-        if (storage != null || sessionStorage != null || notesStorage != null) {
+        if (storage != null || sessionStorage != null) {
             viewModelScope.launch {
                 try {
                     val vault = storage?.load() ?: ProviderVaultSnapshot()
                     val history = sessionStorage?.load() ?: SessionsHistorySnapshot()
-                    val notesTodos = notesStorage?.load() ?: NotesTodosSnapshot()
                     val today = todayDateProvider()
                     _uiState.update { state ->
                         state.copy(
@@ -130,8 +124,6 @@ class PocketCodeViewModel(
                             vioSideRight = vault.vioSideRight,
                             vioYFraction = vault.vioYFraction,
                             isVaultStatePending = false,
-                            notes = notesTodos.notes.sortedByDescending { it.updatedAtMs },
-                            todos = notesTodos.todos,
                             sessions = history.sessions.sortedByDescending { it.lastActivityAtMs },
                             sessionMessages = history.messagesBySession
                         )
@@ -1410,84 +1402,6 @@ class PocketCodeViewModel(
         persistVault()
     }
 
-    fun addNote(title: String, content: String) {
-        val cleanTitle = title.trim()
-        val cleanContent = content.trim()
-        if (cleanTitle.isEmpty() && cleanContent.isEmpty()) return
-        val newNote = NoteItem(
-            id = UUID.randomUUID().toString(),
-            title = cleanTitle.ifEmpty { "Untitled note" },
-            content = cleanContent,
-            updatedAtMs = System.currentTimeMillis()
-        )
-        _uiState.update { state ->
-            state.copy(notes = listOf(newNote) + state.notes)
-        }
-        persistNotes()
-    }
-
-    fun updateNote(noteId: String, title: String, content: String) {
-        val cleanTitle = title.trim()
-        val cleanContent = content.trim()
-        if (cleanTitle.isEmpty() && cleanContent.isEmpty()) return
-        val now = System.currentTimeMillis()
-        _uiState.update { state ->
-            val updated = state.notes.map { note ->
-                if (note.id == noteId) {
-                    note.copy(
-                        title = cleanTitle.ifEmpty { "Untitled note" },
-                        content = cleanContent,
-                        updatedAtMs = now
-                    )
-                } else {
-                    note
-                }
-            }.sortedByDescending { it.updatedAtMs }
-            state.copy(notes = updated)
-        }
-        persistNotes()
-    }
-
-    fun deleteNote(noteId: String) {
-        _uiState.update { state ->
-            state.copy(notes = state.notes.filterNot { it.id == noteId })
-        }
-        persistNotes()
-    }
-
-    fun addTodo(text: String) {
-        val cleanText = text.trim()
-        if (cleanText.isEmpty()) return
-        val newTodo = TodoItem(
-            id = UUID.randomUUID().toString(),
-            text = cleanText,
-            isDone = false,
-            createdAtMs = System.currentTimeMillis()
-        )
-        _uiState.update { state ->
-            state.copy(todos = listOf(newTodo) + state.todos)
-        }
-        persistNotes()
-    }
-
-    fun toggleTodo(todoId: String) {
-        _uiState.update { state ->
-            state.copy(
-                todos = state.todos.map { todo ->
-                    if (todo.id == todoId) todo.copy(isDone = !todo.isDone) else todo
-                }
-            )
-        }
-        persistNotes()
-    }
-
-    fun deleteTodo(todoId: String) {
-        _uiState.update { state ->
-            state.copy(todos = state.todos.filterNot { it.id == todoId })
-        }
-        persistNotes()
-    }
-
     private fun triggerTransientVioMood(mood: VioMood, durationMs: Long) {
         vioMoodResetJob?.cancel()
         _uiState.update { it.copy(vioMood = mood) }
@@ -1949,19 +1863,6 @@ class PocketCodeViewModel(
         }
     }
 
-    private fun persistNotes() {
-        val repo = notesStorage ?: return
-        val state = _uiState.value
-        viewModelScope.launch {
-            repo.save(
-                NotesTodosSnapshot(
-                    notes = state.notes,
-                    todos = state.todos
-                )
-            )
-        }
-    }
-
     companion object {
         fun provideFactory(context: Context): ViewModelProvider.Factory {
             val appCtx = context.applicationContext
@@ -1973,7 +1874,6 @@ class PocketCodeViewModel(
                         appContext = appCtx,
                         storage = EncryptedProviderStorage(appCtx),
                         sessionStorage = SessionStorage(appCtx),
-                        notesStorage = NotesStorage(appCtx),
                         networkClient = ProviderNetworkClient(),
                         mcpClient = sharedMcpClient,
                         orchestrator = AgentOrchestrator(AgentChatClient(), sharedMcpClient),

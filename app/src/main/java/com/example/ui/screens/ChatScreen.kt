@@ -1,11 +1,9 @@
 package com.example.ui.screens
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -75,10 +73,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -93,7 +89,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -103,17 +98,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.data.ProjectWorkspace
-import com.example.data.TerminalEnvironmentManager
-import com.example.data.TerminalSessionController
 import com.example.model.AgentConnectionMode
 import com.example.model.AgentWorkMode
 import com.example.model.AppUiState
-import com.example.model.ChatWorkspacePanel
 import com.example.model.SessionItem
 import com.example.ui.components.AttachmentThumbnail
 import com.example.ui.components.ChatMessageBubble
-import com.example.ui.components.FloatingChatToolbarOverlay
-import com.example.ui.components.FloatingWorkspaceSheetContainer
 import com.example.ui.components.FuturisticBackdrop
 import com.example.ui.components.GlassCard
 import com.example.ui.components.GlassOutlinedButton
@@ -170,14 +160,7 @@ fun ChatScreen(
     onResolvePermission: (allow: Boolean) -> Unit,
     onUndoTool: (messageId: String, toolId: String, onFeedback: (String) -> Unit) -> Unit,
     onAttachImage: (Uri, onError: (String) -> Unit) -> Unit,
-    onClearAttachment: () -> Unit,
-    onAddNote: (title: String, content: String) -> Unit = { _, _ -> },
-    onUpdateNote: (id: String, title: String, content: String) -> Unit = { _, _, _ -> },
-    onDeleteNote: (id: String) -> Unit = {},
-    onAddTodo: (text: String) -> Unit = {},
-    onToggleTodo: (id: String) -> Unit = {},
-    onDeleteTodo: (id: String) -> Unit = {},
-    terminalEnvManagerFactory: (Context) -> TerminalEnvironmentManager = { ctx -> TerminalEnvironmentManager(ctx) }
+    onClearAttachment: () -> Unit
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -188,21 +171,6 @@ fun ChatScreen(
     var showPlusMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showWebPreview by remember { mutableStateOf(false) }
-    var activePanel by remember(session.id) { mutableStateOf(ChatWorkspacePanel.CHAT) }
-    var bottomInputBarHeightPx by remember { mutableIntStateOf(0) }
-
-    val terminalEnvManager = remember(context) { terminalEnvManagerFactory(context) }
-    val terminalController = remember(terminalEnvManager) {
-        TerminalSessionController(terminalEnvManager)
-    }
-
-    DisposableEffect(terminalController) {
-        onDispose { terminalController.dispose() }
-    }
-
-    BackHandler(enabled = activePanel != ChatWorkspacePanel.CHAT) {
-        activePanel = ChatWorkspacePanel.CHAT
-    }
 
     LaunchedEffect(session.id) {
         onOpenSession(session.id)
@@ -637,20 +605,15 @@ fun ChatScreen(
                         }
                     }
 
-                    // Bottom glossy message bar (measured so floating strip/panels never cover it)
-                    Box(
+                    // Bottom glossy message bar
+                    GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .onSizeChanged { bottomInputBarHeightPx = it.height }
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        cornerRadius = 28.dp,
+                        borderColor = BorderActive
                     ) {
-                        GlassCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .navigationBarsPadding()
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            cornerRadius = 28.dp,
-                            borderColor = BorderActive
-                        ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             val pendingAttachment = uiState.pendingAttachment
                             if (pendingAttachment != null) {
@@ -782,55 +745,8 @@ fun ChatScreen(
                                 }
                             }
                         }
-                        }
                     }
                 }
-
-                FloatingWorkspaceSheetContainer(
-                    visible = activePanel != ChatWorkspacePanel.CHAT,
-                    bottomReservedPx = bottomInputBarHeightPx
-                ) {
-                    when (activePanel) {
-                        ChatWorkspacePanel.CHAT -> Unit
-                        ChatWorkspacePanel.TERMINAL -> {
-                            TerminalPanel(
-                                envManager = terminalEnvManager,
-                                controller = terminalController,
-                                projectDir = workspaceProvider()?.directDirectory,
-                                onCloseToChat = { activePanel = ChatWorkspacePanel.CHAT },
-                                onFeedback = { msg ->
-                                    scope.launch { snackbarHostState.showSnackbar(msg) }
-                                }
-                            )
-                        }
-                        ChatWorkspacePanel.BROWSER -> {
-                            BrowserPanel(
-                                session = session,
-                                workspace = workspaceProvider(),
-                                onClose = { activePanel = ChatWorkspacePanel.CHAT }
-                            )
-                        }
-                        ChatWorkspacePanel.NOTES -> {
-                            NotesPanel(
-                                notes = uiState.notes,
-                                todos = uiState.todos,
-                                onAddNote = onAddNote,
-                                onUpdateNote = onUpdateNote,
-                                onDeleteNote = onDeleteNote,
-                                onAddTodo = onAddTodo,
-                                onToggleTodo = onToggleTodo,
-                                onDeleteTodo = onDeleteTodo,
-                                onClose = { activePanel = ChatWorkspacePanel.CHAT }
-                            )
-                        }
-                    }
-                }
-
-                FloatingChatToolbarOverlay(
-                    activePanel = activePanel,
-                    bottomReservedPx = bottomInputBarHeightPx,
-                    onSelectPanel = { panel -> activePanel = panel }
-                )
             }
         }
     }

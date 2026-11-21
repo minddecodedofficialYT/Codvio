@@ -199,13 +199,37 @@ fun WebPreviewDialog(
                                         settings.domStorageEnabled = true
                                         settings.allowFileAccess = true
                                         settings.allowContentAccess = true
-                                        webViewClient = buildWorkspaceWebViewClient(workspace)
+                                        webViewClient = object : WebViewClient() {
+                                            override fun shouldInterceptRequest(
+                                                view: WebView?,
+                                                request: WebResourceRequest?
+                                            ): WebResourceResponse? {
+                                                val url = request?.url ?: return null
+                                                if (url.host == VIRTUAL_HOST) {
+                                                    val rel = url.path?.trimStart('/').orEmpty()
+                                                    if (rel.isNotEmpty()) {
+                                                        val bytes = runBlocking {
+                                                            workspace.readBytes(rel)
+                                                        }
+                                                        if (bytes != null) {
+                                                            val mime = guessWebMime(rel)
+                                                            return WebResourceResponse(
+                                                                mime,
+                                                                "UTF-8",
+                                                                ByteArrayInputStream(bytes)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                return super.shouldInterceptRequest(view, request)
+                                            }
+                                        }
                                         webViewRef = this
                                         if (directIndexFile != null) {
                                             loadUrl("file://${directIndexFile.absolutePath}")
                                         } else {
                                             loadDataWithBaseURL(
-                                                WORKSPACE_PREVIEW_BASE_URL,
+                                                "https://$VIRTUAL_HOST/",
                                                 htmlContent.orEmpty(),
                                                 "text/html",
                                                 "UTF-8",
@@ -221,7 +245,7 @@ fun WebPreviewDialog(
                                         if (view.tag != tagKey) {
                                             view.tag = tagKey
                                             view.loadDataWithBaseURL(
-                                                WORKSPACE_PREVIEW_BASE_URL,
+                                                "https://$VIRTUAL_HOST/",
                                                 htmlContent.orEmpty(),
                                                 "text/html",
                                                 "UTF-8",
@@ -239,50 +263,9 @@ fun WebPreviewDialog(
     }
 }
 
-const val WORKSPACE_PREVIEW_HOST = "pocketcode.local"
-const val WORKSPACE_PREVIEW_BASE_URL = "https://$WORKSPACE_PREVIEW_HOST/"
+private const val VIRTUAL_HOST = "pocketcode.local"
 
-fun buildWorkspaceWebViewClient(
-    workspace: ProjectWorkspace?,
-    onPageStarted: ((String?) -> Unit)? = null,
-    onPageFinished: ((WebView?, String?) -> Unit)? = null
-): WebViewClient {
-    return object : WebViewClient() {
-        override fun shouldInterceptRequest(
-            view: WebView?,
-            request: WebResourceRequest?
-        ): WebResourceResponse? {
-            val url = request?.url ?: return null
-            if (url.host == WORKSPACE_PREVIEW_HOST && workspace != null) {
-                val rel = url.path?.trimStart('/').orEmpty().ifEmpty { "index.html" }
-                val bytes = runBlocking {
-                    workspace.readBytes(rel)
-                }
-                if (bytes != null) {
-                    val mime = guessWebMime(rel)
-                    return WebResourceResponse(
-                        mime,
-                        "UTF-8",
-                        ByteArrayInputStream(bytes)
-                    )
-                }
-            }
-            return super.shouldInterceptRequest(view, request)
-        }
-
-        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-            super.onPageStarted(view, url, favicon)
-            onPageStarted?.invoke(url)
-        }
-
-        override fun onPageFinished(view: WebView?, url: String?) {
-            super.onPageFinished(view, url)
-            onPageFinished?.invoke(view, url)
-        }
-    }
-}
-
-fun guessWebMime(path: String): String {
+private fun guessWebMime(path: String): String {
     return when (Uri.parse(path).lastPathSegment?.substringAfterLast('.', "")?.lowercase()) {
         "html", "htm" -> "text/html"
         "css" -> "text/css"

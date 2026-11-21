@@ -510,7 +510,6 @@ fun SettingsScreen(
                         McpServersSettingsSection(
                             mcpServers = uiState.mcpServers,
                             onOpenAddServer = { showAddMcpServerDialog = true },
-                            onAddSuggestedServer = onAddMcpServer,
                             onTestServer = onTestMcpServer,
                             onDeleteServer = onDeleteMcpServer
                         )
